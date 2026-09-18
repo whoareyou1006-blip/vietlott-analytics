@@ -1,15 +1,17 @@
-# Render.com Blueprint — free web service, no DB card.
-# Deploy: https://render.com/deploy?repo=https://github.com/whoareyou1006-blip/vietlott-analytics
-# Or: render.com -> New -> Blueprint -> chọn repo -> Apply.
+# Render.com Blueprint — deploy 1 click, free web service, khoong can the, khong DB ngoai.
+# Cach dung: https://render.com/deploy?repo=https://github.com/whoareyou1006-blip/vietlott-analytics
+# Hoac render.com → New → Blueprint → chon repo → Apply.
+# Doc them: docs/RENDER_DEPLOY.md
 services:
   - type: web
     name: vietlott-analytics
     runtime: python
     plan: free
-    region: singapore
     autoDeploy: true
+    region: singapore
     healthCheckPath: /api/stats
-    buildCommand: python scripts/fetch_data.py && python scripts/build_db.py
+    buildCommand: |
+      python scripts/fetch_data.py && python scripts/fetch_data2.py && python scripts/fetch_data3.py && python scripts/fetch_data4.py && python scripts/build_db.py
     startCommand: python app/server.py
     envVars:
       - key: PORT
