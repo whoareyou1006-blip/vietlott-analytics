@@ -446,10 +446,11 @@ def auto_update_loop():
 
 
 def main():
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    port = int(os.environ.get("PORT") or (sys.argv[1] if len(sys.argv) > 1 else 8000))
+    host = os.environ.get("HOST", "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1")
     threading.Thread(target=auto_update_loop, daemon=True).start()
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"Vietlott 6/55 Analytics v3: http://localhost:{port}")
+    server = ThreadingHTTPServer((host, port), Handler)
+    print(f"Vietlott 6/55 Analytics v4: http://{host}:{port}")
     print("Tự cập nhật kỳ quay mới: mỗi 30 phút. Nhấn Ctrl+C để dừng.")
     try:
         server.serve_forever()

@@ -1,5 +1,9 @@
 # 🎰 Vietlott Power 6/55 — Analytics & Dự đoán
 
+> 🌐 **English version:** [README.en.md](README.en.md)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/whoareyou1006-blip/vietlott-analytics)
+
 Ứng dụng tích hợp dữ liệu Power 6/55 từ **4 nguồn** vào một database SQLite đồng nhất,
 kèm engine phân tích thống kê và dự đoán 2 dãy số.
 
