@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vietlott 6/55 Analytics &amp; Dự đoán</title>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --card2: #273449; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #f59e0b; --accent2: #ef4444;
+    --green: #22c55e; --blue: #3b82f6; --purple: #a855f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px; display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header h1 span { color: var(--accent); }
+  .badge {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 12px; font-size: 12px; color: var(--muted);
+  }
+  .badge b { color: var(--text); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px 24px 60px; }
+
+  /* ---- Dự đoán ---- */
+  .predict-section { margin-bottom: 28px; }
+  .predict-title {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+  }
+  .predict-title h2 { font-size: 18px; }
+  .predict-title .live { color: var(--green); font-size: 12px; }
+  .sets { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .sets { grid-template-columns: 1fr; } }
+  .set-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px; position: relative; overflow: hidden;
+  }
+  .set-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  }
+  .set-card.cb::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .set-card.ng::before { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+  .set-card .tag {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .set-card h3 { font-size: 16px; margin-bottom: 2px; }
+  .set-card .desc { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .balls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .ball {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 17px; color: #fff;
+    background: radial-gradient(circle at 30% 30%, #64748b, #334155);
+    border: 2px solid #475569; box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .ball.power {
+    background: radial-gradient(circle at 30% 30%, #f59e0b, #b45309);
+    border-color: #fbbf24; width: 48px; height: 48px; font-size: 18px;
+  }
+  .ball-label { font-size: 11px; color: var(--muted); margin-left: 4px; }
+  .set-card .note {
+    margin-top: 12px; font-size: 12px; color: var(--muted);
+    border-top: 1px dashed var(--border); padding-top: 10px;
+  }
+
+  /* ---- Tabs ---- */
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab {
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+    padding: 8px 16px; border-radius: 999px; cursor: pointer; font-size: 13px;
+    transition: all .15s;
+  }
+  .tab:hover { color: var(--text); border-color: #475569; }
+  .tab.active {
+    background: var(--accent); color: #0f172a; font-weight: 600; border-color: var(--accent);
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ---- Bảng ---- */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  }
+  .card h3 { font-size: 14px; margin-bottom: 12px; color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 8px 10px; color: var(--muted);
+    font-weight: 600; border-bottom: 1px solid var(--border);
+    font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+  }
+  td { padding: 7px 10px; border-bottom: 1px solid #263449; }
+  tr:hover td { background: var(--card2); }
+  .num { font-weight: 700; color: var(--accent); }
+  .num-cell { display: inline-flex; gap: 4px; }
+  .mini-ball {
+    width: 26px; height: 26px; border-radius: 50%; font-size: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #334155; color: #fff; font-weight: 600;
+  }
+  .mini-ball.p { background: #b45309; }
+  .right { text-align: right; }
+  .money { color: var(--green); font-weight: 600; }
+
+  /* ---- Bar chart ---- */
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 160px; padding-top: 10px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .bar {
+    width: 100%; max-width: 18px; border-radius: 3px 3px 0 0;
+    background: linear-gradient(180deg, var(--accent), #b45309);
+    min-height: 2px; transition: height .3s;
+  }
+  .bar.hot { background: linear-gradient(180deg, var(--accent2), #991b1b); }
+  .bar-label { font-size: 9px; color: var(--muted); }
+
+  /* ---- Grid stats ---- */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; text-align: center;
+  }
+  .stat .v { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .stat .l { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .backtest-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #263449; font-size: 13px; }
+  .backtest-row:last-child { border-bottom: none; }
+  .backtest-row .name { font-weight: 600; }
+  .backtest-row .val { color: var(--muted); }
+  .backtest-row .val b { color: var(--green); }
+
+  .src-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #263449; font-size: 13px; }
+  .src-item:last-child { border-bottom: none; }
+  .src-item .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .src-item .name { font-weight: 600; }
+  .src-item .note { color: var(--muted); font-size: 12px; }
+
+  .disclaimer {
+    margin-top: 24px; padding: 14px 16px; border: 1px dashed #475569;
+    border-radius: 10px; font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+  .loading { color: var(--muted); padding: 30px; text-align: center; }
+  .err { color: var(--accent2); padding: 20px; text-align: center; }
+
+  /* ---- Nút & form ---- */
+  .btn {
+    background: var(--accent); color: #0f172a; border: none; border-radius: 8px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all .15s;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .btn.ghost {
+    background: var(--card2); color: var(--text); border: 1px solid var(--border);
+  }
+  .btn.ghost:hover { border-color: #475569; }
+  .btn.green { background: var(--green); }
+  .btn.small { padding: 5px 12px; font-size: 12px; }
+  .ai-form { display: grid; gap: 12px; }
+  .ai-form label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .ai-form input, .ai-form select {
+    width: 100%; background: var(--card2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 8px 12px; font-size: 13px;
+    font-family: inherit;
+  }
+  .ai-form input:focus, .ai-form select:focus { outline: none; border-color: var(--accent); }
+  .ai-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 800px) { .ai-row { grid-template-columns: 1fr; } }
+  .ai-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ai-status {
+    margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    display: none;
+  }
+  .ai-status.ok { display: block; background: rgba(34,197,94,.12); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+  .ai-status.fail { display: block; background: rgba(239,68,68,.12); color: var(--accent2); border: 1px solid rgba(239,68,68,.3); }
+  .ai-status.info { display: block; background: rgba(59,130,246,.12); color: var(--blue); border: 1px solid rgba(59,130,246,.3); }
+  .update-badge { display: inline-flex; align-items: center; gap: 6px; }
+  .dot-live { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  .dot-idle { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot-busy { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .ai-set-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .ai-set-card .reason { font-size: 12px; color: var(--muted); margin-top: 8px; font-style: italic; }
+  .ai-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎰 Vietlott <span>Power 6/55</span> Analytics</h1>
+  <span class="badge" id="badge-draws">Đang tải…</span>
+  <span class="badge" id="badge-range"></span>
+  <span class="badge">4 nguồn dữ liệu · SQLite</span>
+  <span class="badge update-badge" id="badge-update"><span class="dot-idle" id="dot-update"></span><span id="txt-update">Chưa cập nhật</span></span>
+  <button class="btn ghost small" id="btn-update" onclick="triggerUpdate()">🔄 Cập nhật kết quả</button>
+</header>
+
+<div class="container">
+  <!-- Dự đoán -->
+  <div class="predict-section">
+    <div class="predict-title">
+      <h2>🎯 Dự đoán 2 dãy số</h2>
+      <span class="live" id="predict-asof"></span>
+    </div>
+    <div class="sets" id="predict-sets">
+      <div class="loading">Đang tính toán dự đoán…</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">Tổng quan</div>
+    <div class="tab" data-tab="draws">Kỳ quay gần nhất</div>
+    <div class="tab" data-tab="freq">Tần suất</div>
+    <div class="tab" data-tab="gan">Số gan</div>
+    <div class="tab" data-tab="jackpot">Jackpot</div>
+    <div class="tab" data-tab="pairs">Cặp số</div>
+    <div class="tab" data-tab="backtest">Kiểm chứng</div>
+    <div class="tab" data-tab="ai">🤖 AI Dự đoán</div>
+    <div class="tab" data-tab="sources">Nguồn dữ liệu</div>
+  </div>
+
+  <!-- Tổng quan -->
+  <div class="panel active" id="panel-overview">
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="card">
+      <h3>📊 Tần suất 55 số (toàn bộ lịch sử)</h3>
+      <div class="bars" id="chart-all"></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>🔥 Top 10 số nóng (30 kỳ gần nhất)</h3>
+        <table id="tbl-hot30"></table>
+      </div>
+      <div class="card">
+        <h3>🧊 Top 10 số gan (lâu chưa về)</h3>
+        <table id="tbl-gan10"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kỳ quay -->
+  <div class="panel" id="panel-draws">
+    <div class="card">
+      <h3>🕐 20 kỳ quay gần nhất</h3>
+      <table id="tbl-draws"></table>
+    </div>
+  </div>
+
+  <!-- Tần suất -->
+  <div class="panel" id="panel-freq">
+    <div class="tabs" style="margin-bottom:12px">
+      <div class="tab active" data-scope="all_time">Toàn bộ</div>
+      <div class="tab" data-scope="last_30">30 kỳ</div>
+      <div class="tab" data-scope="last_60">60 kỳ</div>
+      <div class="tab" data-scope="last_90">90 kỳ</div>
+      <div class="tab" data-scope="power">Số Power</div>
+    </div>
+    <div class="card">
+      <div class="bars" id="chart-freq" style="height:220px"></div>
+    </div>
+    <div class="card">
+      <table id="tbl-freq"></table>
+    </div>
+  </div>
+
+  <!-- Số gan -->
+  <div class="panel" id="panel-gan">
+    <div class="card">
+      <h3>🧊 Số ngày chưa xuất hiện (tính đến kỳ mới nhất)</h3>
+      <table id="tbl-gan"></table>
+    </div>
+  </div>
+
+  <!-- Jackpot -->
+  <div class="panel" id="panel-jackpot">
+    <div class="card">
+      <h3>💰 20 Jackpot 1 lớn nhất lịch sử</h3>
+      <table id="tbl-jackpot"></table>
+    </div>
+  </div>
+
+  <!-- Cặp số -->
+  <div class="panel" id="panel-pairs">
+    <div class="card">
+      <h3>🔗 Cặp số hay về cùng nhau (100 kỳ gần nhất)</h3>
+      <table id="tbl-pairs"></table>
+    </div>
+  </div>
+
+  <!-- Backtest -->
+  <div class="panel" id="panel-backtest">
+    <div class="card">
+      <h3>🧪 Kiểm chứng 300 kỳ gần nhất (walk-forward)</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Với mỗi kỳ trong quá khứ, hệ thống dự đoán CHỈ dùng dữ liệu trước kỳ đó
+        (không nhìn kết quả), rồi đếm số trùng với kết quả thực tế.
+      </p>
+      <div id="backtest-body"></div>
+    </div>
+    <div class="card">
+      <h3>🎲 Xác suất thật của 1 vé 6/55</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Xác suất theo phân phối hypergeometric — không phụ thuộc bất kỳ chiến lược nào.
+      </p>
+      <table id="tbl-prob"></table>
+    </div>
+  </div>
+
+  <!-- AI Dự đoán -->
+  <div class="panel" id="panel-ai">
+    <div class="grid-2">
+      <div class="card">
+        <h3>⚙️ Cấu hình AI</h3>
+        <div class="ai-form">
+          <div>
+            <label>Nhà cung cấp</label>
+            <select id="ai-provider" onchange="onProviderChange()">
+              <option value="ollama" data-base="https://ollama.com" data-key="required">Ollama Cloud (ollama.com)</option>
+              <option value="ollama-local" data-base="http://localhost:11434" data-key="optional">Ollama (local)</option>
+              <option value="gemini" data-base="https://generativelanguage.googleapis.com/v1beta" data-key="required">Google Gemini</option>
+              <option value="openai" data-base="https://api.openai.com/v1" data-key="required">OpenAI</option>
+            </select>
+          </div>
+          <div>
+            <label>API Key / Token <span id="ai-key-hint" style="color:var(--muted);font-weight:400"></span></label>
+            <input type="password" id="ai-key" placeholder="Nhập API key" autocomplete="off">
+          </div>
+          <div class="ai-row">
+            <div>
+              <label>Base URL</label>
+              <input type="text" id="ai-base" placeholder="https://...">
+            </div>
+            <div>
+              <label>Model <span id="ai-model-hint" style="color:var(--muted);font-weight:400"></span></label>
+              <input type="text" id="ai-model" list="ai-model-list" placeholder="Chọn hoặc nhập model">
+              <datalist id="ai-model-list"></datalist>
+            </div>
+          </div>
+          <div class="ai-actions">
+            <button class="btn ghost" id="btn-ai-save" onclick="saveAIConfig()">💾 Lưu cấu hình</button>
+            <button class="btn ghost" id="btn-ai-check" onclick="checkAI()">🔌 Kiểm tra kết nối</button>
+            <button class="btn ghost" id="btn-ai-models" onclick="loadAIModels()">📋 Tải danh sách model</button>
+            <button class="btn green" id="btn-ai-predict" onclick="runAIPredict()">🤖 Dự đoán bằng AI</button>
+          </div>
+          <div class="ai-status" id="ai-status"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🎯 Kết quả AI dự đoán</h3>
+        <div class="ai-meta" id="ai-meta"></div>
+        <div id="ai-result"><div class="loading">Chưa có dự đoán AI. Bấm "Dự đoán bằng AI" hoặc chờ tự động sau khi cập nhật kỳ mới.</div></div>
+        <div class="note" style="font-size:12px;color:var(--muted);margin-top:10px">
+          🤖 AI Mode gửi bối cảnh thống kê (kỳ gần, tần suất, số gan, cấu trúc) cho mô hình ngôn ngữ
+          và yêu cầu chọn 2 dãy số. Lưu ý: AI cũng <b>không thể tăng xác suất trúng</b> — kết quả
+          chỉ mang tính tham khảo, chơi có trách nhiệm.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nguồn -->
+  <div class="panel" id="panel-sources">
+    <div class="card">
+      <h3>🗂️ 4 nguồn dữ liệu đã tích hợp</h3>
+      <div id="sources-body"></div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    ⚠️ <b>Lưu ý quan trọng:</b> Power 6/55 là trò chơi quay số ngẫu nhiên, mỗi kỳ độc lập hoàn toàn.
+    Kiểm chứng 300 kỳ cho thấy mọi chiến lược thống kê đều cho kết quả <b>ngang ngửa chọn số ngẫu nhiên</b>
+    (chênh lệch nằm trong sai số thống kê). Dự đoán chỉ giúp chọn dãy số có cấu trúc giống kết quả thực tế
+    và tránh trùng lặp giữa các vé — <b>không làm tăng xác suất trúng</b>. Cách duy nhất tăng cơ hội là mua
+    nhiều vé hơn (hoặc vé bao). Hãy chơi có trách nhiệm, trong khả năng tài chính của bạn.
+  </div>
+</div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const fmtMoney = (n) => n == null ? "—" : Number(n).toLocaleString("vi-VN") + " ₫";
+const fmtDate = (d) => d ? d.split("-").reverse().join("/") : "";
+
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(url + " → " + r.status);
+  return r.json();
+}
+
+function ballHtml(n, cls = "") {
+  return `<span class="mini-ball ${cls}">${String(n).padStart(2, "0")}</span>`;
+}
+
+function renderBalls(nums, power) {
+  return nums.map(n => ballHtml(n)).join("") + ballHtml(power, "p");
+}
+
+/* ---------- Dự đoán ---------- */
+async function loadPredict() {
+  try {
+    const p = await getJSON("/api/predict");
+    $("#predict-asof").textContent = "· dữ liệu đến kỳ " + p.total_draws + " (" + fmtDate(p.as_of) + ")";
+    const colors = { can_bang: "cb", nong_gan: "ng" };
+    $("#predict-sets").innerHTML = p.sets.map(s => `
+      <div class="set-card ${colors[s.strategy] || ""}">
+        <div class="tag">Dãy số ${s.strategy === "can_bang" ? "1" : "2"}</div>
+        <h3>${s.label}</h3>
+        <div class="desc">${s.desc}</div>
+        <div class="balls">
+          ${s.numbers.map(n => `<span class="ball">${String(n).padStart(2, "0")}</span>`).join("")}
+          <span class="ball power">${String(s.power).padStart(2, "0")}</span>
+          <span class="ball-label">Power</span>
+        </div>
+        <div class="note">📐 Cấu trúc: lẻ/chẵn ${s.structure.odd_even} · tổng ${s.structure.sum} · ${s.structure.decades} chục</div>
+        <div class="note">💡 Chơi 6 số chính + 1 số Power. Trúng Jackpot 2 khi khớp 5/6 + Power.</div>
+      </div>`).join("");
+  } catch (e) {
+    $("#predict-sets").innerHTML = `<div class="err">Lỗi tải dự đoán: ${e.message}</div>`;
+  }
+}
+
+/* ---------- Tổng quan ---------- */
+async function loadOverview() {
+  try {
+    const s = await getJSON("/api/stats");
+    $("#badge-draws").innerHTML = `📅 <b>${s.total_draws}</b> kỳ quay`;
+    $("#badge-range").innerHTML = `${fmtDate(s.first_date)} → ${fmtDate(s.last_date)}`;
+    $("#stat-grid").innerHTML = `
+      <div class="stat"><div class="v">${s.total_draws}</div><div class="l">Tổng kỳ quay</div></div>
+      <div class="stat"><div class="v">${fmtDate(s.first_date)}</div><div class="l">Kỳ đầu tiên</div></div>
+      <div class="stat"><div class="v">${fmtDate(s.last_date)}</div><div class="l">Kỳ mới nhất</div></div>
+      <div class="stat"><div class="v">${s.draws_with_jackpot}</div><div class="l">Kỳ có Jackpot</div></div>
+      <div class="stat"><div class="v" style="font-size:16px">${fmtMoney(s.max_jackpot)}</div><div class="l">Jackpot 1 lớn nhất</div></div>`;
+
+    const freq = await getJSON("/api/frequency?scope=all_time");
+    renderChart($("#chart-all"), freq, 55);
+    const hot30 = (await getJSON("/api/frequency?scope=last_30")).slice().sort((a, b) => b.count - a.count).slice(0, 10);
+    $("#tbl-hot30").innerHTML = `<tr><th>Số</th><th class="right">Lần về</th></tr>` +
+      hot30.map(r => `<tr><td class="num">${String(r.number).padStart(2, "0")}</td><td class="right">${r.count}</td></tr>`).join("");
+    const gan = await getJSON("/api/gan");
+    $("#tbl-gan10").innerHTML = `<tr><th>Số</th><th class="right">Ngày chưa về</th></tr>` +
+      gan.slice(0, 10).map(r => `<tr><td class="num">${String(r.number).padStart(2, "0")}</td><td class="right">${r.days} ngày</td></tr>`).join("");
+  } catch (e) {
+    $("#stat-grid").innerHTML = `<div class="err">Lỗi: ${e.message}</div>`;
+  }
+}
+
+/* ---------- Kỳ quay ---------- */
+async function loadDraws() {
+  const draws = await getJSON("/api/draws?limit=20");
+  $("#tbl-draws").innerHTML = `
+    <tr><th>Kỳ</th><th>Ngày</th><th>Kết quả</th><th class="right">Jackpot 1</th><th class="right">Jackpot 2</th></tr>` +
+    draws.map(d => `<tr>
+      <td class="num">#${d.draw_code}</td>
+      <td>${fmtDate(d.date)}</td>
+      <td><span class="num-cell">${renderBalls([d.n1,d.n2,d.n3,d.n4,d.n5,d.n6], d.power)}</span></td>
+      <td class="right money">${fmtMoney(d.jackpot1)}</td>
+      <td class="right money">${fmtMoney(d.jackpot2)}</td>
+    </tr>`).join("");
+}
+
+/* ---------- Tần suất ---------- */
+let freqScope = "all_time";
+async function loadFreq() {
+  const freq = await getJSON("/api/frequency?scope=" + freqScope);
+  renderChart($("#chart-freq"), freq, 55);
+  const total = freq.reduce((a, r) => a + r.count, 0);
+  $("#tbl-freq").innerHTML = `
+    <tr><th>Số</th><th class="right">Lần về</th><th class="right">%</th></tr>` +
+    freq.map(r => `<tr>
+      <td class="num">${String(r.number).padStart(2, "0")}</td>
+      <td class="right">${r.count}</td>
+      <td class="right">${(100 * r.count / total).toFixed(2)}%</td>
+    </tr>`).join("");
+}
+
+/* ---------- Số gan ---------- */
+async function loadGan() {
+  const gan = await getJSON("/api/gan");
+  $("#tbl-gan").innerHTML = `
+    <tr><th>Số</th><th class="right">Ngày chưa về</th><th>Mức độ</th></tr>` +
+    gan.map(r => {
+      const lvl = r.days >= 60 ? "🔥 Rất gan" : r.days >= 40 ? "⚡ Gan" : r.days >= 20 ? "🌤️ Trung bình" : "✅ Mới về";
+      return `<tr><td class="num">${String(r.number).padStart(2, "0")}</td>
+        <td class="right">${r.days} ngày</td><td>${lvl}</td></tr>`;
+    }).join("");
+}
+
+/* ---------- Jackpot ---------- */
+async function loadJackpot() {
+  const jp = await getJSON("/api/jackpots");
+  $("#tbl-jackpot").innerHTML = `
+    <tr><th>Hạng</th><th class="right">Giá trị</th><th>Ngày</th></tr>` +
+    jp.map(j => `<tr>
+      <td class="num">#${j.rank}</td>
+      <td class="right money">${fmtMoney(j.jackpot)}</td>
+      <td>${j.date}</td>
+    </tr>`).join("");
+}
+
+/* ---------- Cặp số ---------- */
+async function loadPairs() {
+  const pairs = await getJSON("/api/pairs");
+  $("#tbl-pairs").innerHTML = `
+    <tr><th>Cặp số</th><th class="right">Số lần về cùng</th></tr>` +
+    pairs.map(p => `<tr>
+      <td class="num">${p.pair.slice(0, 2)} &amp; ${p.pair.slice(2)}</td>
+      <td class="right">${p.count}</td>
+    </tr>`).join("");
+}
+
+/* ---------- Backtest ---------- */
+async function loadBacktest() {
+  const bt = await getJSON("/api/backtest?n=300");
+  const names = { can_bang: "Chiến lược Cân bằng", nong_gan: "Chiến lược Nóng + Gan", random: "Ngẫu nhiên (baseline)", random_struct: "Ngẫu nhiên + cấu trúc" };
+  $("#backtest-body").innerHTML = Object.entries(bt).map(([k, v]) => `
+    <div class="backtest-row">
+      <span class="name">${names[k] || k}</span>
+      <span class="val">trung bình <b>${v.avg}</b> số trúng/kỳ · ≥2 số: <b>${v.pct_2plus}%</b> kỳ · phân phối 0:${v.dist[0]} 1:${v.dist[1]} 2:${v.dist[2]} 3:${v.dist[3]}</span>
+    </div>`).join("");
+
+  const prob = await getJSON("/api/probabilities");
+  const tiers = { 0: "0 số", 1: "1 số", 2: "2 số", 3: "3 số (Giải Ba)", 4: "4 số (Giải Nhì)", 5: "5 số (Giải Nhất)", 6: "6 số (Jackpot 1)" };
+  $("#tbl-prob").innerHTML = `<tr><th>Số trùng</th><th class="right">Xác suất</th><th class="right">Tỷ lệ</th></tr>` +
+    Object.entries(prob).map(([k, v]) => {
+      const odds = v > 0 ? 1 / (v / 100) : 28989675;
+      return `<tr><td>${tiers[k]}</td><td class="right">${v.toFixed(6)}%</td><td class="right">1/${odds.toLocaleString("vi-VN")}</td></tr>`;
+    }).join("");
+}
+
+/* ---------- Nguồn ---------- */
+async function loadSources() {
+  const src = await getJSON("/api/sources");
+  const colors = ["#f59e0b", "#3b82f6", "#22c55e", "#a855f7"];
+  $("#sources-body").innerHTML = src.map((s, i) => `
+    <div class="src-item">
+      <span class="dot" style="background:${colors[i % 4]}"></span>
+      <div>
+        <div class="name">${s.name} ${s.draws_count ? `· ${s.draws_count} kỳ` : ""}</div>
+        <div class="note">${s.notes || ""}</div>
+      </div>
+    </div>`).join("");
+}
+
+/* ---------- Chart ---------- */
+function renderChart(el, data, maxBars) {
+  const max = Math.max(...data.map(r => r.count));
+  const avg = max / 2;
+  el.innerHTML = data.map(r => {
+    const h = Math.max(2, Math.round(100 * r.count / max));
+    const hot = r.count >= avg;
+    return `<div class="bar-wrap" title="${String(r.number).padStart(2, "0")}: ${r.count} lần">
+      <div class="bar ${hot ? "hot" : ""}" style="height:${h}%"></div>
+      <div class="bar-label">${r.number % 5 === 0 ? r.number : ""}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------- Cập nhật tự động ---------- */
+async function triggerUpdate() {
+  const btn = $("#btn-update");
+  btn.disabled = true; btn.textContent = "⏳ Đang cập nhật…";
+  try {
+    const r = await fetch("/api/update", { method: "POST" });
+    const j = await r.json();
+    showUpdateStatus(j.message || "Đã bắt đầu");
+    pollUpdateStatus(true);
+  } catch (e) {
+    showUpdateStatus("Lỗi: " + e.message);
+    btn.disabled = false; btn.textContent = "🔄 Cập nhật kết quả";
+  }
+}
+
+function showUpdateStatus(msg) {
+  $("#txt-update").textContent = msg;
+}
+
+async function pollUpdateStatus(force = false) {
+  try {
+    const s = await getJSON("/api/update/status");
+    const dot = $("#dot-update");
+    if (s.running) {
+      dot.className = "dot-busy";
+      showUpdateStatus("Đang cập nhật…");
+    } else {
+      dot.className = "dot-idle";
+      const last = s.last_result;
+      if (last && last.new_draw) {
+        const nd = last.new_draw;
+        showUpdateStatus(`Kỳ mới #${nd.draw_code} (${fmtDate(nd.date)}): ${nd.numbers.map(n => String(n).padStart(2, "0")).join(" ")} + P${String(nd.power).padStart(2, "0")}`);
+        // có kỳ mới -> tải lại toàn bộ dữ liệu + hiển thị dự đoán tự động
+        await Promise.all([loadPredict(), loadOverview(), loadDraws(), loadFreq(), loadGan(), loadJackpot(), loadPairs(), loadSources()]);
+        if (s.auto_predict) renderAutoPredict(s.auto_predict);
+        if (s.auto_ai_predict) renderAIResult(s.auto_ai_predict);
+      } else if (last) {
+        showUpdateStatus("Đã cập nhật " + (s.last_run || ""));
+      }
+    }
+    if (force) {
+      const btn = $("#btn-update");
+      btn.disabled = false; btn.textContent = "🔄 Cập nhật kết quả";
+    }
+  } catch (e) { /* server chưa sẵn sàng */ }
+}
+
+function renderAutoPredict(pred) {
+  if (!pred || pred.error) return;
+  const colors = { can_bang: "cb", nong_gan: "ng" };
+  $("#predict-asof").textContent = "· dữ liệu đến kỳ " + pred.total_draws + " (" + fmtDate(pred.as_of) + ") · tự cập nhật";
+  $("#predict-sets").innerHTML = pred.sets.map(s => `
+    <div class="set-card ${colors[s.strategy] || ""}">
+      <div class="tag">Dãy số ${s.strategy === "can_bang" ? "1" : "2"}</div>
+      <h3>${s.label}</h3>
+      <div class="desc">${s.desc}</div>
+      <div class="balls">
+        ${s.numbers.map(n => `<span class="ball">${String(n).padStart(2, "0")}</span>`).join("")}
+        <span class="ball power">${String(s.power).padStart(2, "0")}</span>
+        <span class="ball-label">Power</span>
+      </div>
+      <div class="note">📐 Cấu trúc: lẻ/chẵn ${s.structure.odd_even} · tổng ${s.structure.sum} · ${s.structure.decades} chục</div>
+    </div>`).join("");
+}
+
+/* ---------- AI Dự đoán ---------- */
+const AI_DEFAULTS = {
+  ollama: { base: "https://ollama.com", model: "llama3.1", keyHint: "(bắt buộc - tạo key tại ollama.com/settings/keys)" },
+  "ollama-local": { base: "http://localhost:11434", model: "llama3.1", keyHint: "(để trống nếu local không cần auth)" },
+  gemini: { base: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-1.5-flash", keyHint: "(bắt buộc)" },
+  openai: { base: "https://api.openai.com/v1", model: "gpt-4o-mini", keyHint: "(bắt buộc)" },
+};
+
+async function loadAIConfig() {
+  try {
+    const c = await getJSON("/api/ai/config");
+    // chọn đúng option Ollama Cloud / local dựa trên base_url đã lưu
+    let provider = c.provider || "ollama";
+    if (provider === "ollama" && c.base_url && /localhost|127\.0\.0\.1/.test(c.base_url)) {
+      provider = "ollama-local";
+    }
+    $("#ai-provider").value = provider;
+    $("#ai-key").value = "";
+    $("#ai-key").placeholder = c.has_key ? "Đã lưu key (nhập để thay mới)" : "Nhập API key";
+    $("#ai-base").value = c.base_url || AI_DEFAULTS[provider]?.base || "";
+    $("#ai-model").value = c.model || AI_DEFAULTS[provider]?.model || "";
+    updateAIHints();
+  } catch (e) { /* bỏ qua */ }
+}
+
+function updateAIHints() {
+  const p = $("#ai-provider").value;
+  const d = AI_DEFAULTS[p] || {};
+  $("#ai-key-hint").textContent = d.keyHint || "";
+  $("#ai-model-hint").textContent = "";
+}
+
+async function onProviderChange() {
+  const p = $("#ai-provider").value;
+  const d = AI_DEFAULTS[p] || {};
+  // tự điền Base URL + model mặc định
+  $("#ai-base").value = d.base || "";
+  $("#ai-model").value = d.model || "";
+  $("#ai-key").value = "";
+  updateAIHints();
+  // tự tải danh sách model khả dụng
+  await loadAIModels();
+}
+
+async function loadAIModels() {
+  const st = $("#ai-status");
+  const btn = $("#btn-ai-models");
+  btn.disabled = true;
+  st.className = "ai-status info"; st.textContent = "Đang tải danh sách model…";
+  try {
+    const r = await fetch("/api/ai/models", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(aiFormBody()),
+    });
+    const j = await r.json();
+    const dl = $("#ai-model-list");
+    if (j.ok && j.models && j.models.length) {
+      dl.innerHTML = j.models.map(m => `<option value="${m}">`).join("");
+      $("#ai-model-hint").textContent = `(${j.models.length} model khả dụng)`;
+      // nếu model hiện tại chưa có trong danh sách thì chọn model đầu tiên
+      const cur = $("#ai-model").value;
+      if (!cur || !j.models.includes(cur)) {
+        $("#ai-model").value = j.models[0];
+      }
+      st.className = "ai-status ok";
+      st.textContent = `✅ Tải xong ${j.models.length} model: ${j.models.slice(0, 5).join(", ")}${j.models.length > 5 ? "…" : ""}`;
+    } else {
+      st.className = "ai-status fail";
+      st.textContent = "❌ " + (j.message || "Không tải được danh sách model");
+    }
+  } catch (e) {
+    st.className = "ai-status fail"; st.textContent = "❌ Lỗi: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function aiFormBody() {
+  let provider = $("#ai-provider").value;
+  if (provider === "ollama-local") provider = "ollama"; // backend chỉ biết "ollama"
+  return {
+    provider: provider,
+    api_key: $("#ai-key").value,
+    base_url: $("#ai-base").value,
+    model: $("#ai-model").value,
+  };
+}
+
+async function saveAIConfig() {
+  const st = $("#ai-status");
+  st.className = "ai-status info"; st.textContent = "Đang lưu…";
+  try {
+    const r = await fetch("/api/ai/config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(aiFormBody()),
+    });
+    const j = await r.json();
+    st.className = "ai-status ok"; st.textContent = "✅ Đã lưu cấu hình AI";
+    loadAIConfig();
+  } catch (e) {
+    st.className = "ai-status fail"; st.textContent = "❌ Lỗi lưu: " + e.message;
+  }
+}
+
+async function checkAI() {
+  const st = $("#ai-status");
+  st.className = "ai-status info"; st.textContent = "Đang kiểm tra kết nối…";
+  const btn = $("#btn-ai-check"); btn.disabled = true;
+  try {
+    const r = await fetch("/api/ai/check", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(aiFormBody()),
+    });
+    const j = await r.json();
+    st.className = j.ok ? "ai-status ok" : "ai-status fail";
+    st.textContent = (j.ok ? "✅ " : "❌ ") + j.message;
+    if (j.ok) loadAIModels(); // kết nối OK -> tự tải danh sách model
+  } catch (e) {
+    st.className = "ai-status fail"; st.textContent = "❌ Lỗi: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function runAIPredict() {
+  const st = $("#ai-status");
+  const btn = $("#btn-ai-predict"); btn.disabled = true; btn.textContent = "⏳ AI đang phân tích…";
+  $("#ai-result").innerHTML = `<div class="loading">🤖 AI đang phân tích dữ liệu và chọn số…</div>`;
+  try {
+    const r = await fetch("/api/ai/predict", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(aiFormBody()),
+    });
+    const j = await r.json();
+    renderAIResult(j);
+    if (!j.ok) {
+      st.className = "ai-status fail"; st.textContent = "❌ " + j.message;
+    } else {
+      st.className = "ai-status ok"; st.textContent = "✅ AI đã dự đoán xong";
+    }
+  } catch (e) {
+    $("#ai-result").innerHTML = `<div class="err">Lỗi: ${e.message}</div>`;
+    st.className = "ai-status fail"; st.textContent = "❌ Lỗi: " + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "🤖 Dự đoán bằng AI";
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderAIResult(j) {
+  const meta = $("#ai-meta");
+  if (!j.ok) {
+    meta.textContent = "";
+    const raw = j.raw ? `<details class="ai-raw"><summary>Xem phản hồi thô của AI</summary><pre>${escapeHtml(j.raw)}</pre></details>` : "";
+    $("#ai-result").innerHTML = `<div class="err">${j.message || "Dự đoán AI thất bại"}</div>${raw}`;
+    return;
+  }
+  const labels = { gemini: "Google Gemini", openai: "OpenAI", ollama: "Ollama" };
+  meta.textContent = `Nguồn: ${labels[j.provider] || j.provider} · model ${j.model}`;
+  $("#ai-result").innerHTML = j.sets.map((s, i) => `
+    <div class="ai-set-card">
+      <div class="tag">Dãy số ${i + 1}</div>
+      <div class="balls" style="margin-top:8px">
+        ${s.numbers.map(n => `<span class="ball">${String(n).padStart(2, "0")}</span>`).join("")}
+        <span class="ball power">${String(s.power).padStart(2, "0")}</span>
+        <span class="ball-label">Power</span>
+      </div>
+      ${s.reason ? `<div class="reason">💬 ${s.reason}</div>` : ""}
+    </div>`).join("");
+}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll(".tabs .tab").forEach(t => {
+  t.addEventListener("click", () => {
+    const scope = t.dataset.scope;
+    if (scope) {
+      document.querySelectorAll(".tabs .tab[data-scope]").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      freqScope = scope;
+      loadFreq();
+      return;
+    }
+    const tab = t.dataset.tab;
+    document.querySelectorAll(".tab[data-tab]").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    $("#panel-" + tab).classList.add("active");
+  });
+});
+
+/* ---------- Init ---------- */
+(async function init() {
+  await Promise.all([loadPredict(), loadOverview(), loadDraws(), loadFreq(), loadGan(), loadJackpot(), loadPairs(), loadBacktest(), loadSources(), loadAIConfig()]);
+  pollUpdateStatus();
+  setInterval(pollUpdateStatus, 30000); // tự kiểm tra kỳ mới mỗi 30 giây
+})();
+</script>
+</body>
+</html>

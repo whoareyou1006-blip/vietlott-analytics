@@ -1,0 +1,20 @@
+# Python portable (không commit - máy nào cũng có thể dùng python hệ thống)
+runtime/
+
+# Dữ liệu sinh ra khi chạy (fetch_data.py + build_db.py tạo lại được)
+data/
+
+# API key AI (data/ai_config.json nằm trong data/ - đã loại ở trên)
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Hệ điều hành / editor
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# Log
+*.log
